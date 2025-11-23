@@ -1,0 +1,18 @@
+[PostgreSQL]
+; Servidor de base de datos PostgreSQL
+Server=localhost
+Port=5432
+Database=sigiep_catastro
+Username=postgres
+Password=
+
+[SQLite]
+; Configuración de SQLite (en memoria por defecto)
+; No requiere configuración adicional
+Mode=Memory
+
+[Conexion]
+; Tiempo de espera para conexión (segundos)
+ConnectionTimeout=30
+; Reintentos de conexión
+MaxRetries=3

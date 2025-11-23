@@ -99,6 +99,9 @@
         <DCCReference Include="Forms\uFrmFicha.pas">
             <Form>frmFicha</Form>
         </DCCReference>
+        <DCCReference Include="Forms\uFrmConfigConexion.pas">
+            <Form>frmConfigConexion</Form>
+        </DCCReference>
         <DCCReference Include="Units\uAuthManager.pas"/>
         <DCCReference Include="Units\uCalculoCatastral.pas"/>
         <DCCReference Include="Units\uNotificaciones.pas"/>

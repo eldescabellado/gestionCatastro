@@ -559,11 +559,11 @@ VALUES ('INSPECTOR', 'Inspector de campo', FALSE, TRUE);
 INSERT INTO Roles (Nombre, Descripcion, EsSuperUsuario, Activo)
 VALUES ('CONSULTA', 'Solo consulta de información', FALSE, TRUE);
 
--- Insertar Super Usuario (Password: Admin123!)
--- Nota: En producción usar hash real con bcrypt
+-- Insertar Super Usuario (Password: admin123)
+-- Hash = SHA256(Salt + Password + Salt)
 INSERT INTO Usuarios (Username, PasswordHash, Salt, Nombre, Apellido, Email, RolID, EsInmutable, Activo)
 VALUES ('superadmin',
-        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', -- Hash SHA256 ejemplo
+        '19523dfbcbcbc20d8897cd89c59f40d66eae61e8b53a3c0a4213f20ea2a35bcc', -- SHA256(a1b2c3d4e5f6g7h8admin123a1b2c3d4e5f6g7h8)
         'a1b2c3d4e5f6g7h8',
         'Super',
         'Administrador',

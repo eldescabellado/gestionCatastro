@@ -48,6 +48,16 @@ type
     lblParcela: TLabel;
     edtParcela: TEdit;
 
+    // Grupo: Geolocalización
+    gbGeolocalizacion: TGroupBox;
+    lblLatitud: TLabel;
+    edtLatitud: TEdit;
+    lblLongitud: TLabel;
+    edtLongitud: TEdit;
+    btnGeolocalizacion: TBitBtn;
+    edtDireccionGeo: TEdit;
+    lblDireccionGeo: TLabel;
+
     // Grupo: Linderos
     gbLinderos: TGroupBox;
     lblLinderoNorte: TLabel;
@@ -230,6 +240,7 @@ type
     procedure btnBuscarContribClick(Sender: TObject);
     procedure edtAreaTerrenoExit(Sender: TObject);
     procedure edtAreaConstruccionExit(Sender: TObject);
+    procedure btnGeolocalizacionClick(Sender: TObject);
 
   private
     FModo: TModoFormulario;
@@ -241,6 +252,9 @@ type
     FRutaFotoPrincipal: string;
     FRutaFotoFachada: string;
     FRutaFotoInterior: string;
+
+    FLatitud: Double;
+    FLongitud: Double;
 
     procedure InicializarCombos;
     procedure LimpiarFormulario;
@@ -267,7 +281,7 @@ implementation
 {$R *.dfm}
 
 uses
-  uDmMain, uAuthManager;
+  uDmMain, uAuthManager, uFrmGeolocalizacion;
 
 { TfrmFicha }
 
@@ -421,6 +435,9 @@ begin
   FRutaFotoPrincipal := '';
   FRutaFotoFachada := '';
   FRutaFotoInterior := '';
+
+  FLatitud := 0;
+  FLongitud := 0;
 
   FFichaID := 0;
   FContribuyenteID := 0;
@@ -964,6 +981,37 @@ procedure TfrmFicha.edtAreaConstruccionExit(Sender: TObject);
 begin
   if Trim(edtAreaConstruccion.Text) <> '' then
     CalcularAvaluo;
+end;
+
+procedure TfrmFicha.btnGeolocalizacionClick(Sender: TObject);
+var
+  Lat, Lon: Double;
+  Dir: string;
+begin
+  // Cargar valores actuales
+  Lat := FLatitud;
+  Lon := FLongitud;
+  Dir := edtDireccionGeo.Text;
+
+  // Abrir formulario de geolocalización
+  if TfrmGeolocalizacion.Ejecutar(Lat, Lon, Dir) then
+  begin
+    FLatitud := Lat;
+    FLongitud := Lon;
+
+    // Mostrar en los campos
+    if Lat <> 0 then
+      edtLatitud.Text := FormatFloat('0.000000', Lat)
+    else
+      edtLatitud.Text := '';
+
+    if Lon <> 0 then
+      edtLongitud.Text := FormatFloat('0.000000', Lon)
+    else
+      edtLongitud.Text := '';
+
+    edtDireccionGeo.Text := Dir;
+  end;
 end;
 
 end.

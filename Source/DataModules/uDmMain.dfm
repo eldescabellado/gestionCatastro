@@ -26,6 +26,11 @@ object dmMain: TdmMain
     Left = 168
     Top = 88
   end
+  object FDGUIxWaitCursor: TFDGUIxWaitCursor
+    Provider = 'Forms'
+    Left = 280
+    Top = 88
+  end
   object qryGeneral: TFDQuery
     Connection = FDConnectionPG
     Left = 56

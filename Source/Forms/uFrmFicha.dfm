@@ -208,6 +208,69 @@ object frmFicha: TfrmFicha
         end
       end
 
+      object gbGeolocalizacion: TGroupBox
+        Left = 440
+        Top = 8
+        Width = 428
+        Height = 80
+        Caption = 'Geolocalizaci'#243'n'
+        TabOrder = 3
+        object lblLatitud: TLabel
+          Left = 16
+          Top = 24
+          Width = 42
+          Height = 13
+          Caption = 'Latitud:'
+        end
+        object edtLatitud: TEdit
+          Left = 65
+          Top = 21
+          Width = 90
+          Height = 21
+          TabOrder = 0
+          ReadOnly = True
+        end
+        object lblLongitud: TLabel
+          Left = 165
+          Top = 24
+          Width = 50
+          Height = 13
+          Caption = 'Longitud:'
+        end
+        object edtLongitud: TEdit
+          Left = 220
+          Top = 21
+          Width = 90
+          Height = 21
+          TabOrder = 1
+          ReadOnly = True
+        end
+        object btnGeolocalizacion: TBitBtn
+          Left = 320
+          Top = 18
+          Width = 100
+          Height = 28
+          Caption = 'Seleccionar...'
+          TabOrder = 2
+          OnClick = btnGeolocalizacionClick
+        end
+        object lblDireccionGeo: TLabel
+          Left = 16
+          Top = 52
+          Width = 52
+          Height = 13
+          Caption = 'Direcci'#243'n:'
+        end
+        object edtDireccionGeo: TEdit
+          Left = 65
+          Top = 49
+          Width = 355
+          Height = 21
+          TabOrder = 3
+          ReadOnly = True
+        end
+      end
+
       object gbLinderos: TGroupBox
         Left = 8
         Top = 304

@@ -4,6 +4,7 @@ uses
   Vcl.Forms,
   Vcl.Dialogs,
   System.SysUtils,
+  System.UITypes,
   uDmMain in 'DataModules\uDmMain.pas' {dmMain: TDataModule},
   uFrmLogin in 'Forms\uFrmLogin.pas' {frmLogin},
   uFrmDashboard in 'Forms\uFrmDashboard.pas' {frmDashboard},

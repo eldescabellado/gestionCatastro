@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.DateUtils, System.Hash,
   System.NetEncoding, System.JSON, Vcl.Graphics, Vcl.Imaging.pngimage,
-  FireDAC.Comp.Client;
+  Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param;
 
 type
   // Estado del Token de Autorización

@@ -118,7 +118,7 @@ implementation
 {$R *.dfm}
 
 uses
-  uDmMain, uFrmFicha, uFrmContribuyentes;
+  uDmMain, uFrmFicha, uFrmContribuyentes, uFrmSolicitudes;
 
 { TfrmDashboard }
 
@@ -440,9 +440,17 @@ begin
 end;
 
 procedure TfrmDashboard.btnSolicitudesClick(Sender: TObject);
+var
+  Frm: TfrmSolicitudes;
 begin
   // Abrir formulario de Solicitudes
-  ShowMessage('Módulo de Solicitudes - Por implementar');
+  Frm := TfrmSolicitudes.Create(Application);
+  try
+    Frm.ShowModal;
+  finally
+    Frm.Free;
+  end;
+  ActualizarDashboard;
 end;
 
 procedure TfrmDashboard.btnFichasClick(Sender: TObject);

@@ -11,6 +11,7 @@ uses
   uFrmFicha in 'Forms\uFrmFicha.pas' {frmFicha},
   uFrmConfigConexion in 'Forms\uFrmConfigConexion.pas' {frmConfigConexion},
   uFrmContribuyentes in 'Forms\uFrmContribuyentes.pas' {frmContribuyentes},
+  uFrmSolicitudes in 'Forms\uFrmSolicitudes.pas' {frmSolicitudes},
   uAuthManager in 'Units\uAuthManager.pas',
   uCalculoCatastral in 'Units\uCalculoCatastral.pas',
   uNotificaciones in 'Units\uNotificaciones.pas';

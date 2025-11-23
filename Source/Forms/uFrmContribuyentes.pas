@@ -135,7 +135,7 @@ implementation
 {$R *.dfm}
 
 uses
-  uDmMain;
+  uDmMain, uFrmSolicitudes;
 
 { TfrmContribuyentes }
 
@@ -610,9 +610,19 @@ begin
 end;
 
 procedure TfrmContribuyentes.btnVerSolicitudesClick(Sender: TObject);
+var
+  Frm: TfrmSolicitudes;
 begin
   if not FqryContribuyentes.IsEmpty then
-    ShowMessage('Ver solicitudes del contribuyente - Por implementar')
+  begin
+    Frm := TfrmSolicitudes.Create(Application);
+    try
+      Frm.NuevaSolicitudParaContribuyente(FqryContribuyentes.FieldByName('ContribuyenteID').AsInteger);
+      Frm.ShowModal;
+    finally
+      Frm.Free;
+    end;
+  end
   else
     ShowMessage('Seleccione un contribuyente');
 end;

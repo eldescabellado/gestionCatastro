@@ -73,7 +73,7 @@ implementation
 {$R *.dfm}
 
 uses
-  System.IniFiles, Vcl.Forms;
+  System.IniFiles;
 
 const
   // Clave para encriptación simple (en producción usar algo más robusto)

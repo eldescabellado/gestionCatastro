@@ -38,10 +38,14 @@ __recovery/
 
 # Output directories
 Output/
-Win32/
-Win64/
 Debug/
 Release/
+
+# DLLs in Bin folder (keep structure, ignore binaries)
+Bin/Win32/*.dll
+Bin/Win64/*.dll
+!Bin/Win32/.gitkeep
+!Bin/Win64/.gitkeep
 
 # Config files with sensitive data
 Config/database.ini

@@ -147,11 +147,11 @@ begin
       ForceDirectories(FConfigPath);
       IniFile := TIniFile.Create(ConfigFile);
       try
-        IniFile.WriteString('PostgreSQL', 'Server', 'localhost');
-        IniFile.WriteString('PostgreSQL', 'Port', '5432');
-        IniFile.WriteString('PostgreSQL', 'Database', 'sigiep_catastro');
+        IniFile.WriteString('PostgreSQL', 'Server', '168.197.48.48');
+        IniFile.WriteString('PostgreSQL', 'Port', '5669');
+        IniFile.WriteString('PostgreSQL', 'Database', 'postgres');
         IniFile.WriteString('PostgreSQL', 'Username', 'postgres');
-        IniFile.WriteString('PostgreSQL', 'Password', '');
+        IniFile.WriteString('PostgreSQL', 'Password', 'Mateo12--');
       finally
         IniFile.Free;
       end;

@@ -1,10 +1,10 @@
 [PostgreSQL]
 ; Servidor de base de datos PostgreSQL
-Server=localhost
-Port=5432
-Database=sigiep_catastro
+Server=168.197.48.48
+Port=5669
+Database=postgres
 Username=postgres
-Password=
+Password=Mateo12--
 
 [SQLite]
 ; Configuración de SQLite (en memoria por defecto)

@@ -10,6 +10,7 @@ uses
   uFrmDashboard in 'Forms\uFrmDashboard.pas' {frmDashboard},
   uFrmFicha in 'Forms\uFrmFicha.pas' {frmFicha},
   uFrmConfigConexion in 'Forms\uFrmConfigConexion.pas' {frmConfigConexion},
+  uFrmContribuyentes in 'Forms\uFrmContribuyentes.pas' {frmContribuyentes},
   uAuthManager in 'Units\uAuthManager.pas',
   uCalculoCatastral in 'Units\uCalculoCatastral.pas',
   uNotificaciones in 'Units\uNotificaciones.pas';

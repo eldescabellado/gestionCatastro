@@ -118,7 +118,7 @@ implementation
 {$R *.dfm}
 
 uses
-  uDmMain;
+  uDmMain, uFrmFicha, uFrmContribuyentes;
 
 { TfrmDashboard }
 
@@ -426,9 +426,17 @@ begin
 end;
 
 procedure TfrmDashboard.btnContribuyentesClick(Sender: TObject);
+var
+  Frm: TfrmContribuyentes;
 begin
   // Abrir formulario de Contribuyentes
-  ShowMessage('Módulo de Contribuyentes - Por implementar');
+  Frm := TfrmContribuyentes.Create(Application);
+  try
+    Frm.ShowModal;
+  finally
+    Frm.Free;
+  end;
+  ActualizarDashboard;
 end;
 
 procedure TfrmDashboard.btnSolicitudesClick(Sender: TObject);
@@ -438,11 +446,18 @@ begin
 end;
 
 procedure TfrmDashboard.btnFichasClick(Sender: TObject);
+var
+  Frm: TfrmFicha;
 begin
   // Abrir formulario de Fichas Catastrales
-  // Application.CreateForm(TfrmFicha, frmFicha);
-  // frmFicha.ShowModal;
-  ShowMessage('Módulo de Fichas Catastrales - Por implementar');
+  Frm := TfrmFicha.Create(Application);
+  try
+    Frm.NuevaFicha(0);
+    Frm.ShowModal;
+  finally
+    Frm.Free;
+  end;
+  ActualizarDashboard;
 end;
 
 procedure TfrmDashboard.btnVariablesClick(Sender: TObject);

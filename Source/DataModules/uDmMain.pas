@@ -28,23 +28,23 @@ type
   end;
 
   TdmMain = class(TDataModule)
+    // GUI y Drivers (deben estar primero)
+    FDGUIxWaitCursor: TFDGUIxWaitCursor;
+    FDPhysPgDriverLink: TFDPhysPgDriverLink;
+    FDPhysSQLiteDriverLink: TFDPhysSQLiteDriverLink;
+
     // Conexiones
     FDConnectionPG: TFDConnection;
     FDConnectionSQLite: TFDConnection;
 
-    // Drivers y GUI
-    FDPhysPgDriverLink: TFDPhysPgDriverLink;
-    FDPhysSQLiteDriverLink: TFDPhysSQLiteDriverLink;
-    FDGUIxWaitCursor: TFDGUIxWaitCursor;
+    // Transacciones
+    FDTransactionPG: TFDTransaction;
 
     // Queries de uso general
     qryGeneral: TFDQuery;
     qryAuditoria: TFDQuery;
     qryUsuarios: TFDQuery;
     qryPermisos: TFDQuery;
-
-    // Transacciones
-    FDTransactionPG: TFDTransaction;
 
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);

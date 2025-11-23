@@ -3,6 +3,19 @@ object dmMain: TdmMain
   OnDestroy = DataModuleDestroy
   Height = 480
   Width = 640
+  object FDGUIxWaitCursor: TFDGUIxWaitCursor
+    Provider = 'Forms'
+    Left = 392
+    Top = 24
+  end
+  object FDPhysPgDriverLink: TFDPhysPgDriverLink
+    Left = 56
+    Top = 88
+  end
+  object FDPhysSQLiteDriverLink: TFDPhysSQLiteDriverLink
+    Left = 168
+    Top = 88
+  end
   object FDConnectionPG: TFDConnection
     Params.Strings = (
       'DriverID=PG')
@@ -18,18 +31,10 @@ object dmMain: TdmMain
     Left = 168
     Top = 24
   end
-  object FDPhysPgDriverLink: TFDPhysPgDriverLink
-    Left = 56
-    Top = 88
-  end
-  object FDPhysSQLiteDriverLink: TFDPhysSQLiteDriverLink
-    Left = 168
-    Top = 88
-  end
-  object FDGUIxWaitCursor: TFDGUIxWaitCursor
-    Provider = 'Forms'
+  object FDTransactionPG: TFDTransaction
+    Connection = FDConnectionPG
     Left = 280
-    Top = 88
+    Top = 24
   end
   object qryGeneral: TFDQuery
     Connection = FDConnectionPG
@@ -50,10 +55,5 @@ object dmMain: TdmMain
     Connection = FDConnectionPG
     Left = 392
     Top = 160
-  end
-  object FDTransactionPG: TFDTransaction
-    Connection = FDConnectionPG
-    Left = 280
-    Top = 24
   end
 end

@@ -4,8 +4,9 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  System.StrUtils, System.IOUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.ComCtrls, Vcl.Buttons, Vcl.Mask, Vcl.ExtDlgs,
+  Vcl.ComCtrls, Vcl.Buttons, Vcl.Mask, Vcl.ExtDlgs, Vcl.OleCtrls, SHDocVw,
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param,
   uCalculoCatastral;
 
@@ -218,6 +219,20 @@ type
     lblFotoFachada: TLabel;
     lblFotoInterior: TLabel;
 
+    // ===== Pestaña: Geolocalización =====
+    tabGeolocalizacion: TTabSheet;
+    pnlMapaControles: TPanel;
+    lblMapaLatitud: TLabel;
+    edtMapaLatitud: TEdit;
+    lblMapaLongitud: TLabel;
+    edtMapaLongitud: TEdit;
+    btnIrAPunto: TBitBtn;
+    btnLimpiarMapa: TBitBtn;
+    lblMapaDireccion: TLabel;
+    edtMapaDireccion: TEdit;
+    pnlMapa: TPanel;
+    WebBrowser: TWebBrowser;
+
     // Panel de botones
     pnlBotones: TPanel;
     btnGuardar: TBitBtn;
@@ -241,6 +256,10 @@ type
     procedure edtAreaTerrenoExit(Sender: TObject);
     procedure edtAreaConstruccionExit(Sender: TObject);
     procedure btnGeolocalizacionClick(Sender: TObject);
+    procedure btnIrAPuntoClick(Sender: TObject);
+    procedure btnLimpiarMapaClick(Sender: TObject);
+    procedure WebBrowserDocumentComplete(ASender: TObject; const pDisp: IDispatch; const URL: OleVariant);
+    procedure edtMapaLatitudKeyPress(Sender: TObject; var Key: Char);
 
   private
     FModo: TModoFormulario;
@@ -255,8 +274,14 @@ type
 
     FLatitud: Double;
     FLongitud: Double;
+    FMapaCargado: Boolean;
+    FHTMLPath: string;
 
     procedure InicializarCombos;
+    procedure CargarMapa;
+    procedure CentrarMapa(Lat, Lon: Double; Zoom: Integer = 15);
+    procedure ProcesarClickMapa;
+    function GenerarHTMLMapa: string;
     procedure LimpiarFormulario;
     procedure CargarFicha(FichaID: Integer);
     function ValidarDatos: Boolean;
@@ -281,7 +306,7 @@ implementation
 {$R *.dfm}
 
 uses
-  uDmMain, uAuthManager, uFrmGeolocalizacion;
+  uDmMain, uAuthManager, ActiveX, MSHTML;
 
 { TfrmFicha }
 
@@ -294,12 +319,22 @@ begin
 
   FFichaID := 0;
   FContribuyenteID := 0;
+  FMapaCargado := False;
+  FHTMLPath := TPath.Combine(TPath.GetTempPath, 'sigiep_mapa_ficha.html');
+
+  // Valores por defecto para coordenadas (Venezuela - centro)
+  edtMapaLatitud.Text := '8.0000';
+  edtMapaLongitud.Text := '-66.0000';
 
   InicializarCombos;
 end;
 
 procedure TfrmFicha.FormDestroy(Sender: TObject);
 begin
+  // Limpiar archivo temporal del mapa
+  if TFile.Exists(FHTMLPath) then
+    TFile.Delete(FHTMLPath);
+
   FCalculador.Free;
   FQuery.Free;
 end;
@@ -311,6 +346,9 @@ begin
   // Cargar variables de cálculo si no están cargadas
   if not FCalculador.VariablesCargadas then
     FCalculador.CargarVariables;
+
+  // Cargar el mapa de geolocalización
+  CargarMapa;
 end;
 
 procedure TfrmFicha.InicializarCombos;
@@ -984,34 +1022,251 @@ begin
 end;
 
 procedure TfrmFicha.btnGeolocalizacionClick(Sender: TObject);
+begin
+  // Ir a la pestaña de geolocalización
+  PageControl.ActivePage := tabGeolocalizacion;
+
+  // Si hay coordenadas, centrar el mapa
+  if (FLatitud <> 0) or (FLongitud <> 0) then
+  begin
+    edtMapaLatitud.Text := FormatFloat('0.000000', FLatitud);
+    edtMapaLongitud.Text := FormatFloat('0.000000', FLongitud);
+    CentrarMapa(FLatitud, FLongitud);
+  end;
+end;
+
+function TfrmFicha.GenerarHTMLMapa: string;
+var
+  Lat, Lon: string;
+begin
+  // Usar punto como separador decimal para JavaScript
+  Lat := StringReplace(edtMapaLatitud.Text, ',', '.', [rfReplaceAll]);
+  Lon := StringReplace(edtMapaLongitud.Text, ',', '.', [rfReplaceAll]);
+
+  Result :=
+    '<!DOCTYPE html>' + sLineBreak +
+    '<html>' + sLineBreak +
+    '<head>' + sLineBreak +
+    '    <meta charset="utf-8" />' + sLineBreak +
+    '    <meta name="viewport" content="width=device-width, initial-scale=1.0">' + sLineBreak +
+    '    <title>SIGIEP Catastro - Mapa</title>' + sLineBreak +
+    '    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />' + sLineBreak +
+    '    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>' + sLineBreak +
+    '    <style>' + sLineBreak +
+    '        body { margin: 0; padding: 0; }' + sLineBreak +
+    '        #map { position: absolute; top: 0; bottom: 0; width: 100%; }' + sLineBreak +
+    '        .info-box {' + sLineBreak +
+    '            position: absolute; bottom: 10px; left: 10px;' + sLineBreak +
+    '            background: white; padding: 8px 12px;' + sLineBreak +
+    '            border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);' + sLineBreak +
+    '            font-family: Arial, sans-serif; font-size: 12px;' + sLineBreak +
+    '            z-index: 1000;' + sLineBreak +
+    '        }' + sLineBreak +
+    '    </style>' + sLineBreak +
+    '</head>' + sLineBreak +
+    '<body>' + sLineBreak +
+    '    <div id="map"></div>' + sLineBreak +
+    '    <div class="info-box" id="infoBox">Haga clic en el mapa para seleccionar ubicación</div>' + sLineBreak +
+    '    <script>' + sLineBreak +
+    '        var map = L.map(''map'').setView([' + Lat + ', ' + Lon + '], 8);' + sLineBreak +
+    '        ' + sLineBreak +
+    '        L.tileLayer(''https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'', {' + sLineBreak +
+    '            attribution: ''&copy; OpenStreetMap contributors'',' + sLineBreak +
+    '            maxZoom: 19' + sLineBreak +
+    '        }).addTo(map);' + sLineBreak +
+    '        ' + sLineBreak +
+    '        var marker = null;' + sLineBreak +
+    '        var selectedLat = ' + Lat + ';' + sLineBreak +
+    '        var selectedLon = ' + Lon + ';' + sLineBreak +
+    '        ' + sLineBreak +
+    '        function updateMarker(lat, lon) {' + sLineBreak +
+    '            selectedLat = lat;' + sLineBreak +
+    '            selectedLon = lon;' + sLineBreak +
+    '            if (marker) {' + sLineBreak +
+    '                marker.setLatLng([lat, lon]);' + sLineBreak +
+    '            } else {' + sLineBreak +
+    '                marker = L.marker([lat, lon], {draggable: true}).addTo(map);' + sLineBreak +
+    '                marker.on(''dragend'', function(e) {' + sLineBreak +
+    '                    var pos = marker.getLatLng();' + sLineBreak +
+    '                    selectedLat = pos.lat;' + sLineBreak +
+    '                    selectedLon = pos.lng;' + sLineBreak +
+    '                    updateInfoBox(pos.lat, pos.lng);' + sLineBreak +
+    '                    document.title = ''COORDS:'' + pos.lat.toFixed(6) + '','' + pos.lng.toFixed(6);' + sLineBreak +
+    '                });' + sLineBreak +
+    '            }' + sLineBreak +
+    '            updateInfoBox(lat, lon);' + sLineBreak +
+    '        }' + sLineBreak +
+    '        ' + sLineBreak +
+    '        function centerMap(lat, lon, zoom) {' + sLineBreak +
+    '            map.setView([lat, lon], zoom || 15);' + sLineBreak +
+    '            updateMarker(lat, lon);' + sLineBreak +
+    '        }' + sLineBreak +
+    '        ' + sLineBreak +
+    '        function updateInfoBox(lat, lon) {' + sLineBreak +
+    '            document.getElementById(''infoBox'').innerHTML = ' + sLineBreak +
+    '                ''<strong>Lat:</strong> '' + lat.toFixed(6) + ''<br>'' +' + sLineBreak +
+    '                ''<strong>Lon:</strong> '' + lon.toFixed(6);' + sLineBreak +
+    '        }' + sLineBreak +
+    '        ' + sLineBreak +
+    '        function getCoords() {' + sLineBreak +
+    '            return selectedLat.toFixed(6) + '','' + selectedLon.toFixed(6);' + sLineBreak +
+    '        }' + sLineBreak +
+    '        ' + sLineBreak +
+    '        map.on(''click'', function(e) {' + sLineBreak +
+    '            updateMarker(e.latlng.lat, e.latlng.lng);' + sLineBreak +
+    '            document.title = ''COORDS:'' + e.latlng.lat.toFixed(6) + '','' + e.latlng.lng.toFixed(6);' + sLineBreak +
+    '        });' + sLineBreak +
+    '    </script>' + sLineBreak +
+    '</body>' + sLineBreak +
+    '</html>';
+end;
+
+procedure TfrmFicha.CargarMapa;
+var
+  HTML: string;
+begin
+  HTML := GenerarHTMLMapa;
+  TFile.WriteAllText(FHTMLPath, HTML, TEncoding.UTF8);
+  WebBrowser.Navigate('file:///' + StringReplace(FHTMLPath, '\', '/', [rfReplaceAll]));
+end;
+
+procedure TfrmFicha.WebBrowserDocumentComplete(ASender: TObject;
+  const pDisp: IDispatch; const URL: OleVariant);
+begin
+  FMapaCargado := True;
+
+  // Si hay coordenadas previas, centrar el mapa
+  if (FLatitud <> 0) or (FLongitud <> 0) then
+    CentrarMapa(FLatitud, FLongitud, 15);
+end;
+
+procedure TfrmFicha.CentrarMapa(Lat, Lon: Double; Zoom: Integer);
+var
+  Doc: IHTMLDocument2;
+  Win: IHTMLWindow2;
+  Script: string;
+begin
+  if not FMapaCargado then Exit;
+
+  try
+    Doc := WebBrowser.Document as IHTMLDocument2;
+    if Assigned(Doc) then
+    begin
+      Win := Doc.parentWindow;
+      if Assigned(Win) then
+      begin
+        Script := Format('centerMap(%s, %s, %d)',
+          [StringReplace(FormatFloat('0.000000', Lat), ',', '.', [rfReplaceAll]),
+           StringReplace(FormatFloat('0.000000', Lon), ',', '.', [rfReplaceAll]),
+           Zoom]);
+        Win.execScript(Script, 'JavaScript');
+      end;
+    end;
+  except
+    // Ignorar errores de script
+  end;
+end;
+
+procedure TfrmFicha.ProcesarClickMapa;
+var
+  Doc: IHTMLDocument2;
+  Title: string;
+  Parts: TArray<string>;
+begin
+  try
+    Doc := WebBrowser.Document as IHTMLDocument2;
+    if Assigned(Doc) then
+    begin
+      Title := Doc.title;
+
+      if StartsText('COORDS:', Title) then
+      begin
+        Title := Copy(Title, 8, MaxInt);
+        Parts := Title.Split([',']);
+
+        if Length(Parts) = 2 then
+        begin
+          edtMapaLatitud.Text := Trim(Parts[0]);
+          edtMapaLongitud.Text := Trim(Parts[1]);
+
+          FLatitud := StrToFloatDef(StringReplace(Parts[0], '.', FormatSettings.DecimalSeparator, []), 0);
+          FLongitud := StrToFloatDef(StringReplace(Parts[1], '.', FormatSettings.DecimalSeparator, []), 0);
+
+          // Actualizar campos en el grupo de ubicación
+          edtLatitud.Text := Trim(Parts[0]);
+          edtLongitud.Text := Trim(Parts[1]);
+        end;
+      end;
+    end;
+  except
+    // Ignorar errores
+  end;
+end;
+
+procedure TfrmFicha.btnIrAPuntoClick(Sender: TObject);
 var
   Lat, Lon: Double;
-  Dir: string;
+  LatStr, LonStr: string;
 begin
-  // Cargar valores actuales
-  Lat := FLatitud;
-  Lon := FLongitud;
-  Dir := edtDireccionGeo.Text;
+  LatStr := StringReplace(Trim(edtMapaLatitud.Text), '.', FormatSettings.DecimalSeparator, [rfReplaceAll]);
+  LonStr := StringReplace(Trim(edtMapaLongitud.Text), '.', FormatSettings.DecimalSeparator, [rfReplaceAll]);
 
-  // Abrir formulario de geolocalización
-  if TfrmGeolocalizacion.Ejecutar(Lat, Lon, Dir) then
+  if not TryStrToFloat(LatStr, Lat) then
   begin
-    FLatitud := Lat;
-    FLongitud := Lon;
-
-    // Mostrar en los campos
-    if Lat <> 0 then
-      edtLatitud.Text := FormatFloat('0.000000', Lat)
-    else
-      edtLatitud.Text := '';
-
-    if Lon <> 0 then
-      edtLongitud.Text := FormatFloat('0.000000', Lon)
-    else
-      edtLongitud.Text := '';
-
-    edtDireccionGeo.Text := Dir;
+    ShowMessage('Latitud inválida. Use formato decimal (ej: 8.123456)');
+    edtMapaLatitud.SetFocus;
+    Exit;
   end;
+
+  if not TryStrToFloat(LonStr, Lon) then
+  begin
+    ShowMessage('Longitud inválida. Use formato decimal (ej: -66.123456)');
+    edtMapaLongitud.SetFocus;
+    Exit;
+  end;
+
+  if (Lat < -90) or (Lat > 90) then
+  begin
+    ShowMessage('Latitud debe estar entre -90 y 90');
+    edtMapaLatitud.SetFocus;
+    Exit;
+  end;
+
+  if (Lon < -180) or (Lon > 180) then
+  begin
+    ShowMessage('Longitud debe estar entre -180 y 180');
+    edtMapaLongitud.SetFocus;
+    Exit;
+  end;
+
+  FLatitud := Lat;
+  FLongitud := Lon;
+
+  // Actualizar campos en el grupo de ubicación
+  edtLatitud.Text := FormatFloat('0.000000', Lat);
+  edtLongitud.Text := FormatFloat('0.000000', Lon);
+
+  CentrarMapa(Lat, Lon, 15);
+end;
+
+procedure TfrmFicha.btnLimpiarMapaClick(Sender: TObject);
+begin
+  edtMapaLatitud.Text := '8.0000';
+  edtMapaLongitud.Text := '-66.0000';
+  edtMapaDireccion.Text := '';
+  edtLatitud.Text := '';
+  edtLongitud.Text := '';
+  edtDireccionGeo.Text := '';
+  FLatitud := 0;
+  FLongitud := 0;
+
+  CargarMapa;
+end;
+
+procedure TfrmFicha.edtMapaLatitudKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not CharInSet(Key, ['0'..'9', '.', ',', '-', #8]) then
+    Key := #0;
 end;
 
 end.

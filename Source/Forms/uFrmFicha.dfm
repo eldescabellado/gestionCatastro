@@ -1253,6 +1253,118 @@ object frmFicha: TfrmFicha
         end
       end
     end
+
+    object tabGeolocalizacion: TTabSheet
+      Caption = 'Geolocalizaci'#243'n'
+      ImageIndex = 6
+
+      object pnlMapaControles: TPanel
+        Left = 0
+        Top = 0
+        Width = 892
+        Height = 60
+        Align = alTop
+        BevelOuter = bvNone
+        Color = clWhite
+        ParentBackground = False
+        TabOrder = 0
+
+        object lblMapaLatitud: TLabel
+          Left = 16
+          Top = 20
+          Width = 42
+          Height = 13
+          Caption = 'Latitud:'
+        end
+        object edtMapaLatitud: TEdit
+          Left = 65
+          Top = 17
+          Width = 100
+          Height = 21
+          TabOrder = 0
+          Text = '8.0000'
+          OnKeyPress = edtMapaLatitudKeyPress
+        end
+
+        object lblMapaLongitud: TLabel
+          Left = 180
+          Top = 20
+          Width = 50
+          Height = 13
+          Caption = 'Longitud:'
+        end
+        object edtMapaLongitud: TEdit
+          Left = 235
+          Top = 17
+          Width = 100
+          Height = 21
+          TabOrder = 1
+          Text = '-66.0000'
+          OnKeyPress = edtMapaLatitudKeyPress
+        end
+
+        object btnIrAPunto: TBitBtn
+          Left = 350
+          Top = 14
+          Width = 90
+          Height = 28
+          Caption = 'Ir a Punto'
+          TabOrder = 2
+          OnClick = btnIrAPuntoClick
+        end
+
+        object btnLimpiarMapa: TBitBtn
+          Left = 450
+          Top = 14
+          Width = 75
+          Height = 28
+          Caption = 'Limpiar'
+          TabOrder = 3
+          OnClick = btnLimpiarMapaClick
+        end
+
+        object lblMapaDireccion: TLabel
+          Left = 550
+          Top = 20
+          Width = 52
+          Height = 13
+          Caption = 'Direcci'#243'n:'
+        end
+        object edtMapaDireccion: TEdit
+          Left = 610
+          Top = 17
+          Width = 270
+          Height = 21
+          TabOrder = 4
+        end
+      end
+
+      object pnlMapa: TPanel
+        Left = 0
+        Top = 60
+        Width = 892
+        Height = 510
+        Align = alClient
+        BevelOuter = bvNone
+        TabOrder = 1
+
+        object WebBrowser: TWebBrowser
+          Left = 0
+          Top = 0
+          Width = 892
+          Height = 510
+          Align = alClient
+          TabOrder = 0
+          OnDocumentComplete = WebBrowserDocumentComplete
+          ControlData = {
+            4C000000A7380000942C00000000000000000000000000000000000000000000
+            000000004C000000000000000000000001000000E0D057007335CF11AE690800
+            2B2E126208000000000000004C0000000114020000000000C000000000000046
+            8000000000000000000000000000000000000000000000000000000000000000
+            00000000000000000100000000000000000000000000000000000000}
+        end
+      end
+    end
   end
 
   object pnlBotones: TPanel

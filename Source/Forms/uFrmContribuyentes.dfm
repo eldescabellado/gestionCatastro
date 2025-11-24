@@ -313,9 +313,9 @@ object frmContribuyentes: TfrmContribuyentes
         object lblMunicipio: TLabel
           Left = 280
           Top = 100
-          Width = 55
+          Width = 40
           Height = 13
-          Caption = 'Municipio:'
+          Caption = 'Ciudad:'
         end
         object cmbMunicipio: TComboBox
           Left = 350

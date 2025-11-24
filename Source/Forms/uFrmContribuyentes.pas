@@ -211,7 +211,8 @@ begin
   qry := TFDQuery.Create(nil);
   try
     qry.Connection := dmMain.ConnectionPG;
-    qry.SQL.Text := 'SELECT MunicipioID, Nombre FROM Municipios WHERE EstadoID = :EstadoID AND Activo = TRUE ORDER BY Nombre';
+    // Usar tabla Ciudades (corregido de Municipios)
+    qry.SQL.Text := 'SELECT CiudadID, Nombre FROM Ciudades WHERE EstadoID = :EstadoID AND Activo = TRUE ORDER BY Nombre';
     qry.ParamByName('EstadoID').AsInteger := EstadoID;
     qry.Open;
 
@@ -222,7 +223,7 @@ begin
     begin
       cmbMunicipio.Items.AddObject(
         qry.FieldByName('Nombre').AsString,
-        TObject(qry.FieldByName('MunicipioID').AsInteger)
+        TObject(qry.FieldByName('CiudadID').AsInteger)
       );
       qry.Next;
     end;

@@ -356,21 +356,35 @@ var
   qry: TFDQuery;
   EstadoFijo, MunicipioFijo: Integer;
 begin
+  EstadoFijo := 0;
+  MunicipioFijo := 0;
+
   qry := TFDQuery.Create(nil);
   try
     qry.Connection := dmMain.ConnectionPG;
 
-    // Obtener Estado fijo
-    qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''ESTADO_FIJO''';
-    qry.Open;
-    EstadoFijo := qry.FieldByName('Val').AsInteger;
-    qry.Close;
+    try
+      // Obtener Estado fijo
+      qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''ESTADO_FIJO''';
+      qry.Open;
+      if not qry.IsEmpty then
+        EstadoFijo := qry.FieldByName('Val').AsInteger;
+      qry.Close;
 
-    // Obtener Municipio fijo
-    qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''MUNICIPIO_FIJO''';
-    qry.Open;
-    MunicipioFijo := qry.FieldByName('Val').AsInteger;
-    qry.Close;
+      // Obtener Municipio fijo
+      qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''MUNICIPIO_FIJO''';
+      qry.Open;
+      if not qry.IsEmpty then
+        MunicipioFijo := qry.FieldByName('Val').AsInteger;
+      qry.Close;
+    except
+      on E: Exception do
+      begin
+        // La tabla Configuracion no existe todavía, ignorar
+        OutputDebugString(PChar('CargarConfiguracionUbicacion: ' + E.Message));
+        Exit;
+      end;
+    end;
 
     // Si hay Estado fijo, seleccionarlo y deshabilitar
     if EstadoFijo > 0 then
@@ -505,8 +519,8 @@ begin
         'SELECT ContribuyenteID, RIF, ' +
         '  COALESCE(Cedula, NumeroDocumento) AS Cedula, ' +
         '  COALESCE(TipoPersona, CASE WHEN TipoDocumento = ''J'' THEN ''JURIDICA'' ELSE ''NATURAL'' END) AS TipoPersona, ' +
-        '  CASE WHEN TipoDocumento = ''J'' OR COALESCE(TipoPersona, '''') = ''JURIDICA'' THEN RazonSocial ' +
-        '       ELSE COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''') END AS NombreCompleto, ' +
+        '  CASE WHEN COALESCE(TipoPersona, '''') IN (''JURIDICA'', ''GOBIERNO'') OR TipoDocumento = ''J'' THEN COALESCE(RazonSocial, '''') ' +
+        '       ELSE TRIM(COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''')) END AS NombreCompleto, ' +
         '  COALESCE(Celular, TelefonoMovil) AS Celular, ' +
         '  COALESCE(Telefono, TelefonoLocal) AS Telefono, ' +
         '  Email, Activo ' +
@@ -528,8 +542,8 @@ begin
         'SELECT ContribuyenteID, RIF, ' +
         '  COALESCE(Cedula, NumeroDocumento) AS Cedula, ' +
         '  COALESCE(TipoPersona, CASE WHEN TipoDocumento = ''J'' THEN ''JURIDICA'' ELSE ''NATURAL'' END) AS TipoPersona, ' +
-        '  CASE WHEN TipoDocumento = ''J'' OR COALESCE(TipoPersona, '''') = ''JURIDICA'' THEN RazonSocial ' +
-        '       ELSE COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''') END AS NombreCompleto, ' +
+        '  CASE WHEN COALESCE(TipoPersona, '''') IN (''JURIDICA'', ''GOBIERNO'') OR TipoDocumento = ''J'' THEN COALESCE(RazonSocial, '''') ' +
+        '       ELSE TRIM(COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''')) END AS NombreCompleto, ' +
         '  COALESCE(Celular, TelefonoMovil) AS Celular, ' +
         '  COALESCE(Telefono, TelefonoLocal) AS Telefono, ' +
         '  Email, Activo ' +
@@ -744,12 +758,14 @@ begin
       if FModo = mcNuevo then
       begin
         FqryDetalle.SQL.Text :=
-          'INSERT INTO Contribuyentes (RIF, Cedula, TipoPersona, Nombre, Apellido, RazonSocial, ' +
-          'Telefono, Celular, Email, Direccion, Estado, Municipio, Parroquia, CodigoPostal, ' +
+          'INSERT INTO Contribuyentes (RIF, Cedula, TipoPersona, TipoDocumento, NumeroDocumento, ' +
+          'Nombre, Apellido, RazonSocial, ' +
+          'Telefono, Celular, Email, Direccion, DireccionFiscal, Estado, Municipio, Parroquia, CodigoPostal, ' +
           'EstadoID, MunicipioID, ParroquiaID, CiudadID, SectorID, ' +
           'Activo, UsuarioCreacion) ' +
-          'VALUES (:RIF, :Cedula, :TipoPersona, :Nombre, :Apellido, :RazonSocial, ' +
-          ':Telefono, :Celular, :Email, :Direccion, :Estado, :Municipio, :Parroquia, :CodigoPostal, ' +
+          'VALUES (:RIF, :Cedula, :TipoPersona, :TipoDocumento, :NumeroDocumento, ' +
+          ':Nombre, :Apellido, :RazonSocial, ' +
+          ':Telefono, :Celular, :Email, :Direccion, :DireccionFiscal, :Estado, :Municipio, :Parroquia, :CodigoPostal, ' +
           ':EstadoID, :MunicipioID, :ParroquiaID, :CiudadID, :SectorID, ' +
           ':Activo, :UsuarioCreacion) ' +
           'RETURNING ContribuyenteID';
@@ -759,9 +775,10 @@ begin
         FqryDetalle.SQL.Text :=
           'UPDATE Contribuyentes SET ' +
           'RIF = :RIF, Cedula = :Cedula, TipoPersona = :TipoPersona, ' +
+          'TipoDocumento = :TipoDocumento, NumeroDocumento = :NumeroDocumento, ' +
           'Nombre = :Nombre, Apellido = :Apellido, RazonSocial = :RazonSocial, ' +
           'Telefono = :Telefono, Celular = :Celular, Email = :Email, ' +
-          'Direccion = :Direccion, Estado = :Estado, Municipio = :Municipio, ' +
+          'Direccion = :Direccion, DireccionFiscal = :DireccionFiscal, Estado = :Estado, Municipio = :Municipio, ' +
           'Parroquia = :Parroquia, CodigoPostal = :CodigoPostal, ' +
           'EstadoID = :EstadoID, MunicipioID = :MunicipioID, ParroquiaID = :ParroquiaID, ' +
           'CiudadID = :CiudadID, SectorID = :SectorID, ' +
@@ -775,6 +792,16 @@ begin
       FqryDetalle.ParamByName('RIF').AsString := Trim(edtRIF.Text);
       FqryDetalle.ParamByName('Cedula').AsString := Trim(edtCedula.Text);
       FqryDetalle.ParamByName('TipoPersona').AsString := cmbTipoPersona.Text;
+      // Campos de compatibilidad con esquema anterior
+      if (cmbTipoPersona.Text = 'NATURAL') or (cmbTipoPersona.Text = 'FIRMA_PERSONAL') then
+        FqryDetalle.ParamByName('TipoDocumento').AsString := 'V'
+      else if cmbTipoPersona.Text = 'JURIDICA' then
+        FqryDetalle.ParamByName('TipoDocumento').AsString := 'J'
+      else if cmbTipoPersona.Text = 'GOBIERNO' then
+        FqryDetalle.ParamByName('TipoDocumento').AsString := 'G'
+      else
+        FqryDetalle.ParamByName('TipoDocumento').AsString := 'V';
+      FqryDetalle.ParamByName('NumeroDocumento').AsString := Trim(edtCedula.Text);
       FqryDetalle.ParamByName('Nombre').AsString := Trim(edtNombre.Text);
       FqryDetalle.ParamByName('Apellido').AsString := Trim(edtApellido.Text);
       FqryDetalle.ParamByName('RazonSocial').AsString := Trim(edtRazonSocial.Text);
@@ -782,6 +809,7 @@ begin
       FqryDetalle.ParamByName('Celular').AsString := Trim(edtCelular.Text);
       FqryDetalle.ParamByName('Email').AsString := Trim(edtEmail.Text);
       FqryDetalle.ParamByName('Direccion').AsString := Trim(memDireccion.Text);
+      FqryDetalle.ParamByName('DireccionFiscal').AsString := Trim(memDireccion.Text);
       // Guardar texto para compatibilidad
       FqryDetalle.ParamByName('Estado').AsString := cmbEstado.Text;
       FqryDetalle.ParamByName('Municipio').AsString := cmbMunicipio.Text;

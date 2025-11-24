@@ -177,6 +177,10 @@ begin
   // Ocultar panel de recaudación
   if Assigned(pnlContRecaudacion) then
     pnlContRecaudacion.Visible := False;
+
+  // Ocultar panel de actividad reciente
+  if Assigned(pnlActividad) then
+    pnlActividad.Visible := False;
 end;
 
 procedure TfrmDashboard.CargarDatosUsuario;
@@ -399,7 +403,7 @@ begin
     // Gráficos deshabilitados para mejorar rendimiento
     // CargarGraficoSolicitudes;
     // CargarGraficoRecaudacion;
-    CargarActividadReciente;
+    // CargarActividadReciente; // Deshabilitado - panel oculto
     CargarSolicitudesPendientes;
   finally
     Screen.Cursor := crDefault;
@@ -457,15 +461,50 @@ end;
 procedure TfrmDashboard.btnFichasClick(Sender: TObject);
 var
   Frm: TfrmFicha;
+  FrmContrib: TfrmContribuyentes;
+  ContribuyenteID: Integer;
+  Opcion: Integer;
 begin
-  // Abrir formulario de Fichas Catastrales
-  Frm := TfrmFicha.Create(Application);
-  try
-    Frm.NuevaFicha(0);
-    Frm.ShowModal;
-  finally
-    Frm.Free;
+  // Preguntar si desea crear nueva ficha o buscar existente
+  Opcion := MessageDlg('¿Desea crear una nueva Ficha Catastral?' + sLineBreak + sLineBreak +
+    'Sí = Nueva Ficha (seleccionar contribuyente)' + sLineBreak +
+    'No = Consultar Fichas existentes',
+    mtConfirmation, [mbYes, mbNo, mbCancel], 0);
+
+  if Opcion = mrCancel then
+    Exit;
+
+  if Opcion = mrYes then
+  begin
+    // Seleccionar contribuyente para nueva ficha
+    FrmContrib := TfrmContribuyentes.Create(Application);
+    try
+      ContribuyenteID := FrmContrib.SeleccionarContribuyente;
+      if ContribuyenteID > 0 then
+      begin
+        Frm := TfrmFicha.Create(Application);
+        try
+          Frm.NuevaFicha(ContribuyenteID);
+          Frm.ShowModal;
+        finally
+          Frm.Free;
+        end;
+      end;
+    finally
+      FrmContrib.Free;
+    end;
+  end
+  else
+  begin
+    // Consultar fichas existentes
+    Frm := TfrmFicha.Create(Application);
+    try
+      Frm.ShowModal;
+    finally
+      Frm.Free;
+    end;
   end;
+
   ActualizarDashboard;
 end;
 

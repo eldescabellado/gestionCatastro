@@ -106,6 +106,9 @@ type
     procedure gridContribuyentesDblClick(Sender: TObject);
     procedure cmbTipoPersonaChange(Sender: TObject);
     procedure cmbEstadoChange(Sender: TObject);
+    procedure cmbMunicipioChange(Sender: TObject);
+    procedure cmbParroquiaChange(Sender: TObject);
+    procedure cmbCiudadChange(Sender: TObject);
     procedure edtBuscarKeyPress(Sender: TObject; var Key: Char);
 
   private
@@ -125,6 +128,10 @@ type
     procedure AjustarCamposPorTipoPersona;
     procedure CargarEstados;
     procedure CargarMunicipios(EstadoID: Integer);
+    procedure CargarParroquias(MunicipioID: Integer);
+    procedure CargarCiudades(ParroquiaID: Integer);
+    procedure CargarSectores(CiudadID: Integer);
+    procedure CargarConfiguracionUbicacion;
 
   public
     function SeleccionarContribuyente: Integer;
@@ -172,6 +179,9 @@ begin
   // Cargar Estados de Venezuela
   CargarEstados;
 
+  // Aplicar configuración de ubicación fija
+  CargarConfiguracionUbicacion;
+
   ConfigurarGrid;
 end;
 
@@ -211,8 +221,7 @@ begin
   qry := TFDQuery.Create(nil);
   try
     qry.Connection := dmMain.ConnectionPG;
-    // Usar tabla Ciudades (corregido de Municipios)
-    qry.SQL.Text := 'SELECT CiudadID, Nombre FROM Ciudades WHERE EstadoID = :EstadoID AND Activo = TRUE ORDER BY Nombre';
+    qry.SQL.Text := 'SELECT MunicipioID, Nombre FROM Municipios WHERE EstadoID = :EstadoID AND Activo = TRUE ORDER BY Nombre';
     qry.ParamByName('EstadoID').AsInteger := EstadoID;
     qry.Open;
 
@@ -223,7 +232,7 @@ begin
     begin
       cmbMunicipio.Items.AddObject(
         qry.FieldByName('Nombre').AsString,
-        TObject(qry.FieldByName('CiudadID').AsInteger)
+        TObject(qry.FieldByName('MunicipioID').AsInteger)
       );
       qry.Next;
     end;
@@ -234,10 +243,133 @@ begin
     qry.Free;
   end;
 
-  // Limpiar parroquia
+  // Limpiar niveles inferiores
   cmbParroquia.Items.Clear;
-  cmbParroquia.Items.Add('(Seleccione)');
+  cmbParroquia.Items.AddObject('(Seleccione)', TObject(0));
   cmbParroquia.ItemIndex := 0;
+end;
+
+procedure TfrmContribuyentes.CargarParroquias(MunicipioID: Integer);
+var
+  qry: TFDQuery;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+    qry.SQL.Text := 'SELECT ParroquiaID, Nombre FROM Parroquias WHERE MunicipioID = :MunicipioID AND Activo = TRUE ORDER BY Nombre';
+    qry.ParamByName('MunicipioID').AsInteger := MunicipioID;
+    qry.Open;
+
+    cmbParroquia.Items.Clear;
+    cmbParroquia.Items.AddObject('(Seleccione)', TObject(0));
+
+    while not qry.Eof do
+    begin
+      cmbParroquia.Items.AddObject(
+        qry.FieldByName('Nombre').AsString,
+        TObject(qry.FieldByName('ParroquiaID').AsInteger)
+      );
+      qry.Next;
+    end;
+
+    cmbParroquia.ItemIndex := 0;
+    qry.Close;
+  finally
+    qry.Free;
+  end;
+end;
+
+procedure TfrmContribuyentes.CargarCiudades(ParroquiaID: Integer);
+var
+  qry: TFDQuery;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+    qry.SQL.Text := 'SELECT CiudadID, Nombre FROM Ciudades WHERE ParroquiaID = :ParroquiaID AND Activo = TRUE ORDER BY Nombre';
+    qry.ParamByName('ParroquiaID').AsInteger := ParroquiaID;
+    qry.Open;
+
+    // Nota: Necesita cmbCiudad en el formulario
+    // Por ahora usar el campo de texto o agregar combo
+    qry.Close;
+  finally
+    qry.Free;
+  end;
+end;
+
+procedure TfrmContribuyentes.CargarSectores(CiudadID: Integer);
+var
+  qry: TFDQuery;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+    qry.SQL.Text := 'SELECT SectorID, Nombre FROM Sectores WHERE CiudadID = :CiudadID AND Activo = TRUE ORDER BY Nombre';
+    qry.ParamByName('CiudadID').AsInteger := CiudadID;
+    qry.Open;
+
+    // Nota: Necesita cmbSector en el formulario
+    qry.Close;
+  finally
+    qry.Free;
+  end;
+end;
+
+procedure TfrmContribuyentes.CargarConfiguracionUbicacion;
+var
+  qry: TFDQuery;
+  EstadoFijo, MunicipioFijo: Integer;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+
+    // Obtener Estado fijo
+    qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''ESTADO_FIJO''';
+    qry.Open;
+    EstadoFijo := qry.FieldByName('Val').AsInteger;
+    qry.Close;
+
+    // Obtener Municipio fijo
+    qry.SQL.Text := 'SELECT COALESCE(Valor, ''0'')::INTEGER AS Val FROM Configuracion WHERE Clave = ''MUNICIPIO_FIJO''';
+    qry.Open;
+    MunicipioFijo := qry.FieldByName('Val').AsInteger;
+    qry.Close;
+
+    // Si hay Estado fijo, seleccionarlo y deshabilitar
+    if EstadoFijo > 0 then
+    begin
+      // Buscar el índice del estado
+      for var i := 0 to cmbEstado.Items.Count - 1 do
+      begin
+        if Integer(cmbEstado.Items.Objects[i]) = EstadoFijo then
+        begin
+          cmbEstado.ItemIndex := i;
+          cmbEstado.Enabled := False;
+          CargarMunicipios(EstadoFijo);
+          Break;
+        end;
+      end;
+
+      // Si hay Municipio fijo, seleccionarlo
+      if MunicipioFijo > 0 then
+      begin
+        for var j := 0 to cmbMunicipio.Items.Count - 1 do
+        begin
+          if Integer(cmbMunicipio.Items.Objects[j]) = MunicipioFijo then
+          begin
+            cmbMunicipio.ItemIndex := j;
+            cmbMunicipio.Enabled := False;
+            CargarParroquias(MunicipioFijo);
+            Break;
+          end;
+        end;
+      end;
+    end;
+  finally
+    qry.Free;
+  end;
 end;
 
 procedure TfrmContribuyentes.FormDestroy(Sender: TObject);
@@ -718,11 +850,54 @@ begin
   else
   begin
     cmbMunicipio.Items.Clear;
-    cmbMunicipio.Items.Add('(Seleccione)');
+    cmbMunicipio.Items.AddObject('(Seleccione)', TObject(0));
     cmbMunicipio.ItemIndex := 0;
     cmbParroquia.Items.Clear;
-    cmbParroquia.Items.Add('(Seleccione)');
+    cmbParroquia.Items.AddObject('(Seleccione)', TObject(0));
     cmbParroquia.ItemIndex := 0;
+  end;
+end;
+
+procedure TfrmContribuyentes.cmbMunicipioChange(Sender: TObject);
+var
+  MunicipioID: Integer;
+begin
+  // Cargar parroquias del municipio seleccionado
+  if cmbMunicipio.ItemIndex > 0 then
+  begin
+    MunicipioID := Integer(cmbMunicipio.Items.Objects[cmbMunicipio.ItemIndex]);
+    CargarParroquias(MunicipioID);
+  end
+  else
+  begin
+    cmbParroquia.Items.Clear;
+    cmbParroquia.Items.AddObject('(Seleccione)', TObject(0));
+    cmbParroquia.ItemIndex := 0;
+  end;
+end;
+
+procedure TfrmContribuyentes.cmbParroquiaChange(Sender: TObject);
+var
+  ParroquiaID: Integer;
+begin
+  // Cargar ciudades de la parroquia seleccionada
+  if cmbParroquia.ItemIndex > 0 then
+  begin
+    ParroquiaID := Integer(cmbParroquia.Items.Objects[cmbParroquia.ItemIndex]);
+    CargarCiudades(ParroquiaID);
+  end;
+end;
+
+procedure TfrmContribuyentes.cmbCiudadChange(Sender: TObject);
+var
+  CiudadID: Integer;
+begin
+  // Cargar sectores de la ciudad seleccionada
+  if cmbParroquia.ItemIndex > 0 then // Temporalmente usar parroquia hasta agregar cmbCiudad
+  begin
+    CiudadID := 0; // Placeholder - necesita cmbCiudad
+    if CiudadID > 0 then
+      CargarSectores(CiudadID);
   end;
 end;
 

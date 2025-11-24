@@ -296,6 +296,7 @@ type
     procedure NuevaFicha(ContribuyenteID: Integer = 0);
     procedure EditarFicha(FichaID: Integer);
     procedure ConsultarFicha(FichaID: Integer);
+    property FichaID: Integer read FFichaID;
   end;
 
 var

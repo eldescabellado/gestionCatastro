@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
-  System.UITypes,
+  System.UITypes, System.StrUtils,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.Buttons, Vcl.Grids, Vcl.DBGrids, Vcl.Mask,
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param;
@@ -987,7 +987,7 @@ begin
   begin
     Frm := TfrmFicha.Create(Application);
     try
-      Frm.CargarFicha(FFichaID);
+      Frm.ConsultarFicha(FFichaID);
       Frm.ShowModal;
     finally
       Frm.Free;

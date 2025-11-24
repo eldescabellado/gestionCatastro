@@ -171,8 +171,23 @@ end;
 
 procedure TfrmContribuyentes.FormDestroy(Sender: TObject);
 begin
-  FqryContribuyentes.Free;
-  FqryDetalle.Free;
+  // Cerrar queries antes de liberar para evitar hangs
+  try
+    if Assigned(FqryContribuyentes) then
+    begin
+      FqryContribuyentes.Close;
+      FqryContribuyentes.Free;
+    end;
+    if Assigned(FqryDetalle) then
+    begin
+      FqryDetalle.Close;
+      FqryDetalle.Free;
+    end;
+  except
+    on E: Exception do
+      // Log error silently
+      OutputDebugString(PChar('Error en FormDestroy Contribuyentes: ' + E.Message));
+  end;
 end;
 
 procedure TfrmContribuyentes.FormShow(Sender: TObject);
@@ -244,40 +259,58 @@ begin
 
   FqryContribuyentes.Close;
 
-  if Filtro = '' then
-  begin
-    FqryContribuyentes.SQL.Text :=
-      'SELECT ContribuyenteID, RIF, Cedula, TipoPersona, ' +
-      '  CASE WHEN TipoPersona = ''JURIDICA'' THEN RazonSocial ' +
-      '       ELSE Nombre || '' '' || Apellido END AS NombreCompleto, ' +
-      '  Celular, Telefono, Email, Activo ' +
-      'FROM Contribuyentes ' +
-      'ORDER BY NombreCompleto ' +
-      'LIMIT 500';
-  end
-  else
-  begin
-    case cmbFiltroBusqueda.ItemIndex of
-      1: Campo := 'RIF ILIKE :Filtro';
-      2: Campo := 'Cedula ILIKE :Filtro';
-      3: Campo := '(Nombre ILIKE :Filtro OR Apellido ILIKE :Filtro OR RazonSocial ILIKE :Filtro)';
+  try
+    if Filtro = '' then
+    begin
+      // Query compatible con esquema original y nuevas columnas
+      FqryContribuyentes.SQL.Text :=
+        'SELECT ContribuyenteID, RIF, ' +
+        '  COALESCE(Cedula, NumeroDocumento) AS Cedula, ' +
+        '  COALESCE(TipoPersona, CASE WHEN TipoDocumento = ''J'' THEN ''JURIDICA'' ELSE ''NATURAL'' END) AS TipoPersona, ' +
+        '  CASE WHEN TipoDocumento = ''J'' OR COALESCE(TipoPersona, '''') = ''JURIDICA'' THEN RazonSocial ' +
+        '       ELSE COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''') END AS NombreCompleto, ' +
+        '  COALESCE(Celular, TelefonoMovil) AS Celular, ' +
+        '  COALESCE(Telefono, TelefonoLocal) AS Telefono, ' +
+        '  Email, Activo ' +
+        'FROM Contribuyentes ' +
+        'ORDER BY 5 ' +
+        'LIMIT 500';
+    end
     else
-      Campo := '(RIF ILIKE :Filtro OR Cedula ILIKE :Filtro OR Nombre ILIKE :Filtro OR Apellido ILIKE :Filtro OR RazonSocial ILIKE :Filtro)';
+    begin
+      case cmbFiltroBusqueda.ItemIndex of
+        1: Campo := 'RIF ILIKE :Filtro';
+        2: Campo := '(COALESCE(Cedula, NumeroDocumento) ILIKE :Filtro)';
+        3: Campo := '(Nombre ILIKE :Filtro OR Apellido ILIKE :Filtro OR RazonSocial ILIKE :Filtro)';
+      else
+        Campo := '(RIF ILIKE :Filtro OR COALESCE(Cedula, NumeroDocumento) ILIKE :Filtro OR Nombre ILIKE :Filtro OR Apellido ILIKE :Filtro OR RazonSocial ILIKE :Filtro)';
+      end;
+
+      FqryContribuyentes.SQL.Text :=
+        'SELECT ContribuyenteID, RIF, ' +
+        '  COALESCE(Cedula, NumeroDocumento) AS Cedula, ' +
+        '  COALESCE(TipoPersona, CASE WHEN TipoDocumento = ''J'' THEN ''JURIDICA'' ELSE ''NATURAL'' END) AS TipoPersona, ' +
+        '  CASE WHEN TipoDocumento = ''J'' OR COALESCE(TipoPersona, '''') = ''JURIDICA'' THEN RazonSocial ' +
+        '       ELSE COALESCE(Nombre, '''') || '' '' || COALESCE(Apellido, '''') END AS NombreCompleto, ' +
+        '  COALESCE(Celular, TelefonoMovil) AS Celular, ' +
+        '  COALESCE(Telefono, TelefonoLocal) AS Telefono, ' +
+        '  Email, Activo ' +
+        'FROM Contribuyentes ' +
+        'WHERE ' + Campo + ' ' +
+        'ORDER BY 5 ' +
+        'LIMIT 500';
+      FqryContribuyentes.ParamByName('Filtro').AsString := '%' + Filtro + '%';
     end;
 
-    FqryContribuyentes.SQL.Text :=
-      'SELECT ContribuyenteID, RIF, Cedula, TipoPersona, ' +
-      '  CASE WHEN TipoPersona = ''JURIDICA'' THEN RazonSocial ' +
-      '       ELSE Nombre || '' '' || Apellido END AS NombreCompleto, ' +
-      '  Celular, Telefono, Email, Activo ' +
-      'FROM Contribuyentes ' +
-      'WHERE ' + Campo + ' ' +
-      'ORDER BY NombreCompleto ' +
-      'LIMIT 500';
-    FqryContribuyentes.ParamByName('Filtro').AsString := '%' + Filtro + '%';
+    FqryContribuyentes.Open;
+    OutputDebugString(PChar('CargarListado: ' + IntToStr(FqryContribuyentes.RecordCount) + ' registros'));
+  except
+    on E: Exception do
+    begin
+      OutputDebugString(PChar('Error en CargarListado: ' + E.Message));
+      ShowMessage('Error al cargar contribuyentes: ' + E.Message);
+    end;
   end;
-
-  FqryContribuyentes.Open;
 end;
 
 procedure TfrmContribuyentes.CargarContribuyente(ID: Integer);

@@ -164,16 +164,19 @@ begin
   Caption := 'SIGIEP - Sistema de Gestión Integral de Catastro';
   WindowState := wsMaximized;
 
-  // Configurar timer (actualizar cada 30 segundos)
-  timerActualizacion.Interval := 30000;
+  // Configurar timer (actualizar cada 5 minutos para no sobrecargar)
+  timerActualizacion.Interval := 300000; // 5 minutos
   timerActualizacion.Enabled := False;
 
-  // Configurar gráficos
-  chartSolicitudes.Title.Text.Text := 'Solicitudes por Estado';
-  chartSolicitudes.Legend.Visible := True;
+  // Ocultar gráficos (no se usan)
+  if Assigned(pnlGraficoSolicitudes) then
+    pnlGraficoSolicitudes.Visible := False;
+  if Assigned(pnlGraficoRecaudacion) then
+    pnlGraficoRecaudacion.Visible := False;
 
-  chartRecaudacion.Title.Text.Text := 'Recaudación Estimada por Mes';
-  chartRecaudacion.Legend.Visible := False;
+  // Ocultar panel de recaudación
+  if Assigned(pnlContRecaudacion) then
+    pnlContRecaudacion.Visible := False;
 end;
 
 procedure TfrmDashboard.CargarDatosUsuario;
@@ -276,35 +279,32 @@ end;
 
 procedure TfrmDashboard.CargarContadores;
 begin
-  // Contar solicitudes pendientes
-  FqryContadores.SQL.Text :=
-    'SELECT COUNT(*) AS Total FROM Solicitudes ' +
-    'WHERE Estado NOT IN (''APROBADO'', ''RECHAZADO'', ''ANULADO'')';
-  FqryContadores.Open;
-  lblContSolicitudes.Caption := FqryContadores.FieldByName('Total').AsString;
-  FqryContadores.Close;
+  try
+    // Contar solicitudes pendientes
+    FqryContadores.SQL.Text :=
+      'SELECT COUNT(*) AS Total FROM Solicitudes ' +
+      'WHERE Estado NOT IN (''APROBADO'', ''RECHAZADO'', ''ANULADO'')';
+    FqryContadores.Open;
+    lblContSolicitudes.Caption := FqryContadores.FieldByName('Total').AsString;
+    FqryContadores.Close;
 
-  // Contar fichas activas
-  FqryContadores.SQL.Text :=
-    'SELECT COUNT(*) AS Total FROM FichaCatastral WHERE EstadoFicha = ''ACTIVA''';
-  FqryContadores.Open;
-  lblContFichas.Caption := FqryContadores.FieldByName('Total').AsString;
-  FqryContadores.Close;
+    // Contar fichas activas
+    FqryContadores.SQL.Text :=
+      'SELECT COUNT(*) AS Total FROM FichaCatastral WHERE EstadoFicha = ''ACTIVA''';
+    FqryContadores.Open;
+    lblContFichas.Caption := FqryContadores.FieldByName('Total').AsString;
+    FqryContadores.Close;
 
-  // Contar contribuyentes
-  FqryContadores.SQL.Text :=
-    'SELECT COUNT(*) AS Total FROM Contribuyentes WHERE Activo = TRUE';
-  FqryContadores.Open;
-  lblContContribuyentes.Caption := FqryContadores.FieldByName('Total').AsString;
-  FqryContadores.Close;
-
-  // Calcular recaudación estimada
-  FqryContadores.SQL.Text :=
-    'SELECT COALESCE(SUM(MontoImpuestoAnual), 0) AS Total FROM FichaCatastral ' +
-    'WHERE EstadoFicha = ''ACTIVA''';
-  FqryContadores.Open;
-  lblContRecaudacion.Caption := FormatFloat('#,##0.00', FqryContadores.FieldByName('Total').AsFloat);
-  FqryContadores.Close;
+    // Contar contribuyentes
+    FqryContadores.SQL.Text :=
+      'SELECT COUNT(*) AS Total FROM Contribuyentes WHERE Activo = TRUE';
+    FqryContadores.Open;
+    lblContContribuyentes.Caption := FqryContadores.FieldByName('Total').AsString;
+    FqryContadores.Close;
+  except
+    on E: Exception do
+      OutputDebugString(PChar('Error en CargarContadores: ' + E.Message));
+  end;
 end;
 
 procedure TfrmDashboard.CargarGraficoSolicitudes;
@@ -396,8 +396,9 @@ begin
   try
     lblFechaHora.Caption := FormatDateTime('dd/mm/yyyy hh:nn:ss', Now);
     CargarContadores;
-    CargarGraficoSolicitudes;
-    CargarGraficoRecaudacion;
+    // Gráficos deshabilitados para mejorar rendimiento
+    // CargarGraficoSolicitudes;
+    // CargarGraficoRecaudacion;
     CargarActividadReciente;
     CargarSolicitudesPendientes;
   finally

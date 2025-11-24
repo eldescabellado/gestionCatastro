@@ -105,6 +105,7 @@ type
     procedure btnVerSolicitudesClick(Sender: TObject);
     procedure gridContribuyentesDblClick(Sender: TObject);
     procedure cmbTipoPersonaChange(Sender: TObject);
+    procedure cmbEstadoChange(Sender: TObject);
     procedure edtBuscarKeyPress(Sender: TObject; var Key: Char);
 
   private
@@ -122,6 +123,8 @@ type
     function GuardarContribuyente: Boolean;
     procedure ConfigurarGrid;
     procedure AjustarCamposPorTipoPersona;
+    procedure CargarEstados;
+    procedure CargarMunicipios(EstadoID: Integer);
 
   public
     function SeleccionarContribuyente: Integer;
@@ -166,7 +169,74 @@ begin
   cmbTipoPersona.Items.Add('JURIDICA');
   cmbTipoPersona.ItemIndex := 0;
 
+  // Cargar Estados de Venezuela
+  CargarEstados;
+
   ConfigurarGrid;
+end;
+
+procedure TfrmContribuyentes.CargarEstados;
+var
+  qry: TFDQuery;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+    qry.SQL.Text := 'SELECT EstadoID, Nombre FROM Estados WHERE Activo = TRUE ORDER BY Nombre';
+    qry.Open;
+
+    cmbEstado.Items.Clear;
+    cmbEstado.Items.AddObject('(Seleccione)', TObject(0));
+
+    while not qry.Eof do
+    begin
+      cmbEstado.Items.AddObject(
+        qry.FieldByName('Nombre').AsString,
+        TObject(qry.FieldByName('EstadoID').AsInteger)
+      );
+      qry.Next;
+    end;
+
+    cmbEstado.ItemIndex := 0;
+    qry.Close;
+  finally
+    qry.Free;
+  end;
+end;
+
+procedure TfrmContribuyentes.CargarMunicipios(EstadoID: Integer);
+var
+  qry: TFDQuery;
+begin
+  qry := TFDQuery.Create(nil);
+  try
+    qry.Connection := dmMain.ConnectionPG;
+    qry.SQL.Text := 'SELECT MunicipioID, Nombre FROM Municipios WHERE EstadoID = :EstadoID AND Activo = TRUE ORDER BY Nombre';
+    qry.ParamByName('EstadoID').AsInteger := EstadoID;
+    qry.Open;
+
+    cmbMunicipio.Items.Clear;
+    cmbMunicipio.Items.AddObject('(Seleccione)', TObject(0));
+
+    while not qry.Eof do
+    begin
+      cmbMunicipio.Items.AddObject(
+        qry.FieldByName('Nombre').AsString,
+        TObject(qry.FieldByName('MunicipioID').AsInteger)
+      );
+      qry.Next;
+    end;
+
+    cmbMunicipio.ItemIndex := 0;
+    qry.Close;
+  finally
+    qry.Free;
+  end;
+
+  // Limpiar parroquia
+  cmbParroquia.Items.Clear;
+  cmbParroquia.Items.Add('(Seleccione)');
+  cmbParroquia.ItemIndex := 0;
 end;
 
 procedure TfrmContribuyentes.FormDestroy(Sender: TObject);
@@ -632,6 +702,27 @@ end;
 procedure TfrmContribuyentes.cmbTipoPersonaChange(Sender: TObject);
 begin
   AjustarCamposPorTipoPersona;
+end;
+
+procedure TfrmContribuyentes.cmbEstadoChange(Sender: TObject);
+var
+  EstadoID: Integer;
+begin
+  // Cargar municipios del estado seleccionado
+  if cmbEstado.ItemIndex > 0 then
+  begin
+    EstadoID := Integer(cmbEstado.Items.Objects[cmbEstado.ItemIndex]);
+    CargarMunicipios(EstadoID);
+  end
+  else
+  begin
+    cmbMunicipio.Items.Clear;
+    cmbMunicipio.Items.Add('(Seleccione)');
+    cmbMunicipio.ItemIndex := 0;
+    cmbParroquia.Items.Clear;
+    cmbParroquia.Items.Add('(Seleccione)');
+    cmbParroquia.ItemIndex := 0;
+  end;
 end;
 
 procedure TfrmContribuyentes.btnVerFichasClick(Sender: TObject);

@@ -308,6 +308,7 @@ object frmContribuyentes: TfrmContribuyentes
           Width = 180
           Height = 21
           TabOrder = 1
+          OnChange = cmbEstadoChange
         end
         object lblMunicipio: TLabel
           Left = 280

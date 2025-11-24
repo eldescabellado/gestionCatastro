@@ -340,19 +340,48 @@ object frmContribuyentes: TfrmContribuyentes
           TabOrder = 3
           OnChange = cmbParroquiaChange
         end
-        object lblCodigoPostal: TLabel
+        object lblCiudad: TLabel
           Left = 16
+          Top = 140
+          Width = 40
+          Height = 13
+          Caption = 'Ciudad:'
+        end
+        object cmbCiudad: TComboBox
+          Left = 80
+          Top = 137
+          Width = 180
+          Height = 21
+          TabOrder = 4
+          OnChange = cmbCiudadChange
+        end
+        object lblSector: TLabel
+          Left = 280
+          Top = 140
+          Width = 35
+          Height = 13
+          Caption = 'Sector:'
+        end
+        object cmbSector: TComboBox
+          Left = 350
+          Top = 137
+          Width = 180
+          Height = 21
+          TabOrder = 5
+        end
+        object lblCodigoPostal: TLabel
+          Left = 550
           Top = 140
           Width = 45
           Height = 13
           Caption = 'C'#243'd.Post:'
         end
         object edtCodigoPostal: TEdit
-          Left = 80
+          Left = 620
           Top = 137
           Width = 80
           Height = 21
-          TabOrder = 4
+          TabOrder = 6
         end
       end
 

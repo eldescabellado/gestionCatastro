@@ -69,6 +69,10 @@ type
     cmbMunicipio: TComboBox;
     lblParroquia: TLabel;
     cmbParroquia: TComboBox;
+    lblCiudad: TLabel;
+    cmbCiudad: TComboBox;
+    lblSector: TLabel;
+    cmbSector: TComboBox;
     lblCodigoPostal: TLabel;
     edtCodigoPostal: TEdit;
 
@@ -290,12 +294,28 @@ begin
     qry.ParamByName('ParroquiaID').AsInteger := ParroquiaID;
     qry.Open;
 
-    // Nota: Necesita cmbCiudad en el formulario
-    // Por ahora usar el campo de texto o agregar combo
+    cmbCiudad.Items.Clear;
+    cmbCiudad.Items.AddObject('(Seleccione)', TObject(0));
+
+    while not qry.Eof do
+    begin
+      cmbCiudad.Items.AddObject(
+        qry.FieldByName('Nombre').AsString,
+        TObject(qry.FieldByName('CiudadID').AsInteger)
+      );
+      qry.Next;
+    end;
+
+    cmbCiudad.ItemIndex := 0;
     qry.Close;
   finally
     qry.Free;
   end;
+
+  // Limpiar sectores
+  cmbSector.Items.Clear;
+  cmbSector.Items.AddObject('(Seleccione)', TObject(0));
+  cmbSector.ItemIndex := 0;
 end;
 
 procedure TfrmContribuyentes.CargarSectores(CiudadID: Integer);
@@ -309,7 +329,19 @@ begin
     qry.ParamByName('CiudadID').AsInteger := CiudadID;
     qry.Open;
 
-    // Nota: Necesita cmbSector en el formulario
+    cmbSector.Items.Clear;
+    cmbSector.Items.AddObject('(Seleccione)', TObject(0));
+
+    while not qry.Eof do
+    begin
+      cmbSector.Items.AddObject(
+        qry.FieldByName('Nombre').AsString,
+        TObject(qry.FieldByName('SectorID').AsInteger)
+      );
+      qry.Next;
+    end;
+
+    cmbSector.ItemIndex := 0;
     qry.Close;
   finally
     qry.Free;
@@ -885,6 +917,15 @@ begin
   begin
     ParroquiaID := Integer(cmbParroquia.Items.Objects[cmbParroquia.ItemIndex]);
     CargarCiudades(ParroquiaID);
+  end
+  else
+  begin
+    cmbCiudad.Items.Clear;
+    cmbCiudad.Items.AddObject('(Seleccione)', TObject(0));
+    cmbCiudad.ItemIndex := 0;
+    cmbSector.Items.Clear;
+    cmbSector.Items.AddObject('(Seleccione)', TObject(0));
+    cmbSector.ItemIndex := 0;
   end;
 end;
 
@@ -893,11 +934,16 @@ var
   CiudadID: Integer;
 begin
   // Cargar sectores de la ciudad seleccionada
-  if cmbParroquia.ItemIndex > 0 then // Temporalmente usar parroquia hasta agregar cmbCiudad
+  if cmbCiudad.ItemIndex > 0 then
   begin
-    CiudadID := 0; // Placeholder - necesita cmbCiudad
-    if CiudadID > 0 then
-      CargarSectores(CiudadID);
+    CiudadID := Integer(cmbCiudad.Items.Objects[cmbCiudad.ItemIndex]);
+    CargarSectores(CiudadID);
+  end
+  else
+  begin
+    cmbSector.Items.Clear;
+    cmbSector.Items.AddObject('(Seleccione)', TObject(0));
+    cmbSector.ItemIndex := 0;
   end;
 end;
 

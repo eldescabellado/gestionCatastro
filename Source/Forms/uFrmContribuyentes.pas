@@ -113,6 +113,7 @@ type
     procedure cmbMunicipioChange(Sender: TObject);
     procedure cmbParroquiaChange(Sender: TObject);
     procedure cmbCiudadChange(Sender: TObject);
+    procedure edtRIFExit(Sender: TObject);
     procedure edtBuscarKeyPress(Sender: TObject; var Key: Char);
 
   private
@@ -177,7 +178,9 @@ begin
   // Configurar tipo de persona
   cmbTipoPersona.Items.Clear;
   cmbTipoPersona.Items.Add('NATURAL');
+  cmbTipoPersona.Items.Add('FIRMA_PERSONAL');
   cmbTipoPersona.Items.Add('JURIDICA');
+  cmbTipoPersona.Items.Add('GOBIERNO');
   cmbTipoPersona.ItemIndex := 0;
 
   // Cargar Estados de Venezuela
@@ -647,20 +650,46 @@ end;
 
 procedure TfrmContribuyentes.AjustarCamposPorTipoPersona;
 var
-  EsJuridica: Boolean;
+  EsPersonaNatural: Boolean;
+  TipoActual: string;
+  PrefijoRIF: string;
 begin
-  EsJuridica := (cmbTipoPersona.Text = 'JURIDICA');
+  TipoActual := cmbTipoPersona.Text;
+  EsPersonaNatural := (TipoActual = 'NATURAL') or (TipoActual = 'FIRMA_PERSONAL');
 
   // Mostrar/ocultar campos según tipo
-  lblNombre.Visible := not EsJuridica;
-  edtNombre.Visible := not EsJuridica;
-  lblApellido.Visible := not EsJuridica;
-  edtApellido.Visible := not EsJuridica;
-  lblCedula.Visible := not EsJuridica;
-  edtCedula.Visible := not EsJuridica;
+  lblNombre.Visible := EsPersonaNatural;
+  edtNombre.Visible := EsPersonaNatural;
+  lblApellido.Visible := EsPersonaNatural;
+  edtApellido.Visible := EsPersonaNatural;
+  lblCedula.Visible := EsPersonaNatural;
+  edtCedula.Visible := EsPersonaNatural;
 
-  lblRazonSocial.Visible := EsJuridica;
-  edtRazonSocial.Visible := EsJuridica;
+  lblRazonSocial.Visible := not EsPersonaNatural;
+  edtRazonSocial.Visible := not EsPersonaNatural;
+
+  // Auto-llenar prefijo del RIF según tipo
+  if FModo in [mcNuevo, mcEditar] then
+  begin
+    // Determinar prefijo
+    if (TipoActual = 'NATURAL') or (TipoActual = 'FIRMA_PERSONAL') then
+      PrefijoRIF := 'V'
+    else if TipoActual = 'JURIDICA' then
+      PrefijoRIF := 'J'
+    else if TipoActual = 'GOBIERNO' then
+      PrefijoRIF := 'G'
+    else
+      PrefijoRIF := '';
+
+    // Si el RIF está vacío o solo tiene un prefijo, poner el nuevo prefijo
+    if (Trim(edtRIF.Text) = '') or (Length(Trim(edtRIF.Text)) = 1) then
+      edtRIF.Text := PrefijoRIF
+    else if (Length(edtRIF.Text) > 0) and (edtRIF.Text[1] in ['V', 'J', 'G', 'E']) then
+    begin
+      // Cambiar solo el prefijo si ya hay un RIF
+      edtRIF.Text := PrefijoRIF + Copy(edtRIF.Text, 2, Length(edtRIF.Text));
+    end;
+  end;
 end;
 
 function TfrmContribuyentes.ValidarDatos: Boolean;
@@ -717,9 +746,11 @@ begin
         FqryDetalle.SQL.Text :=
           'INSERT INTO Contribuyentes (RIF, Cedula, TipoPersona, Nombre, Apellido, RazonSocial, ' +
           'Telefono, Celular, Email, Direccion, Estado, Municipio, Parroquia, CodigoPostal, ' +
+          'EstadoID, MunicipioID, ParroquiaID, CiudadID, SectorID, ' +
           'Activo, UsuarioCreacion) ' +
           'VALUES (:RIF, :Cedula, :TipoPersona, :Nombre, :Apellido, :RazonSocial, ' +
           ':Telefono, :Celular, :Email, :Direccion, :Estado, :Municipio, :Parroquia, :CodigoPostal, ' +
+          ':EstadoID, :MunicipioID, :ParroquiaID, :CiudadID, :SectorID, ' +
           ':Activo, :UsuarioCreacion) ' +
           'RETURNING ContribuyenteID';
       end
@@ -732,6 +763,8 @@ begin
           'Telefono = :Telefono, Celular = :Celular, Email = :Email, ' +
           'Direccion = :Direccion, Estado = :Estado, Municipio = :Municipio, ' +
           'Parroquia = :Parroquia, CodigoPostal = :CodigoPostal, ' +
+          'EstadoID = :EstadoID, MunicipioID = :MunicipioID, ParroquiaID = :ParroquiaID, ' +
+          'CiudadID = :CiudadID, SectorID = :SectorID, ' +
           'Activo = :Activo, UsuarioModificacion = :UsuarioModificacion, ' +
           'FechaModificacion = CURRENT_TIMESTAMP ' +
           'WHERE ContribuyenteID = :ContribuyenteID';
@@ -749,10 +782,32 @@ begin
       FqryDetalle.ParamByName('Celular').AsString := Trim(edtCelular.Text);
       FqryDetalle.ParamByName('Email').AsString := Trim(edtEmail.Text);
       FqryDetalle.ParamByName('Direccion').AsString := Trim(memDireccion.Text);
+      // Guardar texto para compatibilidad
       FqryDetalle.ParamByName('Estado').AsString := cmbEstado.Text;
       FqryDetalle.ParamByName('Municipio').AsString := cmbMunicipio.Text;
       FqryDetalle.ParamByName('Parroquia').AsString := cmbParroquia.Text;
       FqryDetalle.ParamByName('CodigoPostal').AsString := Trim(edtCodigoPostal.Text);
+      // Guardar IDs
+      if cmbEstado.ItemIndex > 0 then
+        FqryDetalle.ParamByName('EstadoID').AsInteger := Integer(cmbEstado.Items.Objects[cmbEstado.ItemIndex])
+      else
+        FqryDetalle.ParamByName('EstadoID').Clear;
+      if cmbMunicipio.ItemIndex > 0 then
+        FqryDetalle.ParamByName('MunicipioID').AsInteger := Integer(cmbMunicipio.Items.Objects[cmbMunicipio.ItemIndex])
+      else
+        FqryDetalle.ParamByName('MunicipioID').Clear;
+      if cmbParroquia.ItemIndex > 0 then
+        FqryDetalle.ParamByName('ParroquiaID').AsInteger := Integer(cmbParroquia.Items.Objects[cmbParroquia.ItemIndex])
+      else
+        FqryDetalle.ParamByName('ParroquiaID').Clear;
+      if cmbCiudad.ItemIndex > 0 then
+        FqryDetalle.ParamByName('CiudadID').AsInteger := Integer(cmbCiudad.Items.Objects[cmbCiudad.ItemIndex])
+      else
+        FqryDetalle.ParamByName('CiudadID').Clear;
+      if cmbSector.ItemIndex > 0 then
+        FqryDetalle.ParamByName('SectorID').AsInteger := Integer(cmbSector.Items.Objects[cmbSector.ItemIndex])
+      else
+        FqryDetalle.ParamByName('SectorID').Clear;
       FqryDetalle.ParamByName('Activo').AsBoolean := chkActivo.Checked;
 
       if FModo = mcNuevo then
@@ -944,6 +999,31 @@ begin
     cmbSector.Items.Clear;
     cmbSector.Items.AddObject('(Seleccione)', TObject(0));
     cmbSector.ItemIndex := 0;
+  end;
+end;
+
+procedure TfrmContribuyentes.edtRIFExit(Sender: TObject);
+var
+  RIF, Cedula: string;
+  TipoActual: string;
+begin
+  // Auto-llenar Cédula desde RIF para personas naturales
+  TipoActual := cmbTipoPersona.Text;
+  if (TipoActual = 'NATURAL') or (TipoActual = 'FIRMA_PERSONAL') then
+  begin
+    RIF := Trim(edtRIF.Text);
+    if Length(RIF) > 1 then
+    begin
+      // Cédula = RIF sin el último carácter (dígito verificador)
+      // Formato RIF: V12345678-9, Cédula = 12345678
+      Cedula := Copy(RIF, 2, Length(RIF) - 1);
+      // Quitar guión si existe
+      Cedula := StringReplace(Cedula, '-', '', [rfReplaceAll]);
+      // Quitar último dígito (verificador)
+      if Length(Cedula) > 0 then
+        Cedula := Copy(Cedula, 1, Length(Cedula) - 1);
+      edtCedula.Text := Cedula;
+    end;
   end;
 end;
 

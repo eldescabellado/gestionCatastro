@@ -152,6 +152,7 @@ object frmContribuyentes: TfrmContribuyentes
           Height = 21
           CharCase = ecUpperCase
           TabOrder = 1
+          OnExit = edtRIFExit
         end
         object lblCedula: TLabel
           Left = 16
